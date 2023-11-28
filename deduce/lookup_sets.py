@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Dict, Set
 
 import docdeid as dd
 
@@ -184,7 +185,6 @@ def _get_placenames() -> dd.ds.LookupSet:
 
 
 def _get_hospitals() -> dd.ds.LookupSet:
-
     hospitals = dd.ds.LookupSet(matching_pipeline=[dd.str.LowercaseString()])
 
     hospitals.add_items_from_file(
@@ -267,7 +267,19 @@ def _get_whitelist() -> dd.ds.LookupSet:
     return whitelist
 
 
-def get_lookup_sets() -> dd.ds.DsCollection:
+def _filter_active_lookup_sets_by_config(deduce_config: Dict) -> Set[str]:
+    active_lookup_sets = set()
+    for key, value in deduce_config.items():
+        # use endswith sinds neg_lookup also exists and configures a negative lookup set
+        if key.endswith("lookup") and isinstance(value, str):
+            active_lookup_sets.add(value)
+        if isinstance(value, dict):
+            active_lookup_sets.update(_filter_active_lookup_sets_by_config(value))
+
+    return active_lookup_sets
+
+
+def get_lookup_sets(deduce_config: Dict) -> dd.ds.DsCollection:
     """
     Get all lookupsets.
 
@@ -276,6 +288,8 @@ def get_lookup_sets() -> dd.ds.DsCollection:
     """
 
     lookup_sets = dd.ds.DsCollection()
+
+    active_lookup_sets = _filter_active_lookup_sets_by_config(deduce_config)
 
     lookup_set_mapping = {
         "prefixes": _get_prefixes,
@@ -293,6 +307,7 @@ def get_lookup_sets() -> dd.ds.DsCollection:
     }
 
     for name, init_function in lookup_set_mapping.items():
-        lookup_sets[name] = init_function()
+        if name in active_lookup_sets:
+            lookup_sets[name] = init_function()
 
     return lookup_sets

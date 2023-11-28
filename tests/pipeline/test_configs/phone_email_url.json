@@ -1,0 +1,44 @@
+{
+    "adjacent_annotations_slack": "[\\. \\-,]?[\\. ]?",
+    "resolve_overlap_strategy": {
+      "attributes": [
+        "priority",
+        "length"
+      ],
+      "ascending": [
+        false,
+        false
+      ]
+    },
+    "redactor_open_char": "<",
+    "redactor_close_char": ">",
+    "annotators":{ "phone": {
+        "annotator_type": "custom",
+        "group": "phone_numbers",
+        "args": {
+            "module": "deduce.annotator",
+            "class": "PhoneNumberAnnotator",
+            "phone_regexp": "(?<!\\d)(\\(?(0031|\\+31|0)(1[035]|2[0347]|3[03568]|4[03456]|5[0358]|6|7|88|800|91|90[069]|[1-5]\\d{2})\\)?) ?-? ?((\\d{2,4}[ -]?)+\\d{2,4})",
+            "min_digits": 9,
+            "max_digits": 11,
+            "tag": "telefoonnummer"
+        }
+    },
+    "email": {
+      "annotator_type": "regexp",
+      "group": "email_addresses",
+      "args": {
+        "regexp_pattern": "(([-a-zA-Z0-9:%._\\+~#=]{1,256})@([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu))",
+        "tag": "email"
+      }
+    },
+    "url": {
+      "annotator_type": "regexp",
+      "group": "urls",
+      "args": {
+        "regexp_pattern": "((https?:\\/\\/(?:www\\.)?)?([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu)(\\b)([():%_\\+.~,]*[-a-zA-Z-0-9#?&/=]+)*)",
+        "tag": "url"
+      }
+    }
+  }
+}

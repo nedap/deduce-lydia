@@ -39,7 +39,7 @@ class Deduce(dd.DocDeid):
 
         self.config = self._initialize_config()
 
-        self.lookup_sets = get_lookup_sets()
+        self.lookup_sets = get_lookup_sets(self.config)
         self.tokenizers = self._initialize_tokenizers()
         self.initialize_doc_processors()
 
@@ -58,6 +58,7 @@ class Deduce(dd.DocDeid):
 
         default_config_path = Path(os.path.dirname(__file__)).parent / "config.json"
 
+        config = {}
         if self.use_config_defaults:
             with open(default_config_path, "r", encoding="utf-8") as file:
                 config = json.load(file)
@@ -74,8 +75,10 @@ class Deduce(dd.DocDeid):
         """Initializes tokenizers."""
 
         merge_terms = dd.ds.LookupSet()
-        merge_terms += self.lookup_sets["interfixes"]
-        merge_terms += self.lookup_sets["prefixes"]
+        # these merge attributes are only interesting when name annotators are used
+        for key in ["interfixes", "prefixes"]:
+            if key in self.lookup_sets:
+                merge_terms += self.lookup_sets[key]
 
         return {"default": DeduceTokenizer(merge_terms=merge_terms)}
 
@@ -104,23 +107,25 @@ class Deduce(dd.DocDeid):
         self.processors = self._initialize_annotators(
             config["annotators"].copy(), self.lookup_sets, self.tokenizers["default"]
         )
-        self.processors["names"].add_processor(
-            "person_annotation_converter", PersonAnnotationConverter()
-        )
+        if "names" in self.processors:
+            self.processors["names"].add_processor(
+                "person_annotation_converter", PersonAnnotationConverter()
+            )
 
-        self.processors["locations"].add_processor(
-            "remove_street_tags", RemoveAnnotations(tags=["straat"])
-        )
+        if "locations" in self.processors:
+            self.processors["locations"].add_processor(
+                "remove_street_tags", RemoveAnnotations(tags=["straat"])
+            )
 
-        self.processors["locations"].add_processor(
-            "clean_street_tags",
-            CleanAnnotationTag(
-                tag_map={
-                    "straat+huisnummer": "locatie",
-                    "straat+huisnummer+huisnummerletter": "locatie",
-                }
-            ),
-        )
+            self.processors["locations"].add_processor(
+                "clean_street_tags",
+                CleanAnnotationTag(
+                    tag_map={
+                        "straat+huisnummer": "locatie",
+                        "straat+huisnummer+huisnummerletter": "locatie",
+                    }
+                ),
+            )
 
         sort_by_attrs = self.config["resolve_overlap_strategy"]["attributes"]
         sort_by_ascending = self.config["resolve_overlap_strategy"]["ascending"]
@@ -188,7 +193,8 @@ class _AnnotatorFactory:  # pylint: disable=R0903
 
     @staticmethod
     def _get_regexp_annotator(
-        args: dict, extras: dict  # pylint: disable=W0613
+        args: dict,
+        extras: dict,  # pylint: disable=W0613
     ) -> dd.process.Annotator:
         args["regexp_pattern"] = re.compile(args["regexp_pattern"])
         return dd.process.RegexpAnnotator(**args)
