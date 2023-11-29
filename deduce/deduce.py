@@ -75,7 +75,6 @@ class Deduce(dd.DocDeid):
         """Initializes tokenizers."""
 
         merge_terms = dd.ds.LookupSet()
-        # these merge attributes are only interesting when name annotators are used
         for key in ["interfixes", "prefixes"]:
             if key in self.lookup_sets:
                 merge_terms += self.lookup_sets[key]
@@ -107,12 +106,14 @@ class Deduce(dd.DocDeid):
         self.processors = self._initialize_annotators(
             config["annotators"].copy(), self.lookup_sets, self.tokenizers["default"]
         )
-        if "names" in self.processors:
+        if "names" in self.processors._processors:
             self.processors["names"].add_processor(
                 "person_annotation_converter", PersonAnnotationConverter()
             )
 
-        if "locations" in self.processors:
+        x = 2
+
+        if "locations" in self.processors._processors:
             self.processors["locations"].add_processor(
                 "remove_street_tags", RemoveAnnotations(tags=["straat"])
             )
@@ -201,10 +202,11 @@ class _AnnotatorFactory:  # pylint: disable=R0903
 
     @staticmethod
     def _get_multi_token_annotator(args: dict, extras: dict) -> dd.process.Annotator:
-        lookup_set = extras["lookup_sets"][args["lookup_values"]]
+        if isinstance(args["lookup_values"], str):
+            lookup_set = extras["lookup_sets"][args["lookup_values"]]
 
-        args["lookup_values"] = lookup_set.items()
-        args["matching_pipeline"] = lookup_set.matching_pipeline
+            args["lookup_values"] = lookup_set.items()
+            args["matching_pipeline"] = lookup_set.matching_pipeline
 
         return dd.process.MultiTokenLookupAnnotator(
             **args, tokenizer=extras["tokenizer"]

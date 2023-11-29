@@ -62,7 +62,8 @@ class TestDeduceWithCustomConfig:
 
         processors = _get_individual_processors(deduce)
 
-        assert len(processors) == 1
+        # are 2 because when a name processor is added the person annotation converter is added automatically
+        assert len(processors) == 2
 
         text = "Mijn telefoonnummer is 06-12345678. En mijn naam is Elsa van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
         result = deduce.deidentify(text)
@@ -70,5 +71,5 @@ class TestDeduceWithCustomConfig:
         assert len(result.annotations) == 1
         assert (
             result.deidentified_text
-            == "Mijn telefoonnummer is 06-12345678. En mijn naam is <VOORNAAM-1> van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
+            == "Mijn telefoonnummer is 06-12345678. En mijn naam is <PERSOON-1> van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
         )
