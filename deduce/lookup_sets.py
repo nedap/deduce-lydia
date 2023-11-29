@@ -267,16 +267,12 @@ def _get_whitelist() -> dd.ds.LookupSet:
     return whitelist
 
 
-def _filter_active_lookup_sets_by_config(deduce_config: Dict) -> Set[str]:
-    active_lookup_sets = set()
-    for key, value in deduce_config.items():
-        # use endswith sinds neg_lookup also exists and configures a negative lookup set
-        if key.endswith("lookup") and isinstance(value, str):
-            active_lookup_sets.add(value)
-        if isinstance(value, dict):
-            active_lookup_sets.update(_filter_active_lookup_sets_by_config(value))
+def _find_active_annotator_groups(deduce_config: Dict) -> Set[str]:
+    active_groups = set()
+    for key, value in deduce_config["annotators"].items():
+        active_groups.add(value["group"])
 
-    return active_lookup_sets
+    return active_groups
 
 
 def get_lookup_sets(deduce_config: Dict) -> dd.ds.DsCollection:
@@ -289,7 +285,7 @@ def get_lookup_sets(deduce_config: Dict) -> dd.ds.DsCollection:
 
     lookup_sets = dd.ds.DsCollection()
 
-    active_lookup_sets = _filter_active_lookup_sets_by_config(deduce_config)
+    active_annotator_groups = _find_active_annotator_groups(deduce_config)
 
     lookup_set_mapping = {
         "prefixes": _get_prefixes,
@@ -305,9 +301,23 @@ def get_lookup_sets(deduce_config: Dict) -> dd.ds.DsCollection:
         "healthcare_institutions": _get_institutions,
         "whitelist": _get_whitelist,
     }
+    lookup_group_mapping = {
+        "prefixes": "names",
+        "first_names": "names",
+        "first_name_exceptions": "names",
+        "interfixes": "names",
+        "interfix_surnames": "names",
+        "surnames": "names",
+        "surname_exceptions": "names",
+        "streets": "locations",
+        "placenames": "locations",
+        "hospitals": "institutions",
+        "healthcare_institutions": "institutions",
+        "whitelist": "names",
+    }
 
     for name, init_function in lookup_set_mapping.items():
-        if name in active_lookup_sets:
+        if lookup_group_mapping[name] in active_annotator_groups:
             lookup_sets[name] = init_function()
 
     return lookup_sets

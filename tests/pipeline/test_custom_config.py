@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
-from deduce.deduce import Deduce
+from deduce import Deduce
 
 
 def _get_individual_processors(deduce: Deduce) -> Dict:
@@ -16,11 +16,12 @@ def _get_individual_processors(deduce: Deduce) -> Dict:
     return individual_processor_dict
 
 
+test_configs_dir = Path(os.path.dirname(__file__)) / "configs_for_testing"
+
+
 class TestDeduceWithCustomConfig:
     def test_phone_only(self):
-        phone_config_path = (
-            Path(os.path.dirname(__file__)) / "test_configs" / "phone_only.json"
-        )
+        phone_config_path = Path(test_configs_dir, "phone_only.json")
         # Use config defaults = False otherwise it only replaces the content of phone annotator default config with the new config
         # but keeps all other annotators. This requires to copy the top level defaults from the default config into the new config
         deduce = Deduce(config_file=phone_config_path, use_config_defaults=False)
@@ -39,11 +40,7 @@ class TestDeduceWithCustomConfig:
         )
 
     def test_email_phone_url(self):
-        phone_config_path = (
-            Path(os.path.dirname(__file__)) / "test_configs" / "phone_email_url.json"
-        )
-        # Use config defaults = False otherwise it only replaces the content of phone annotator default config with the new config
-        # but keeps all other annotators. This requires to copy the top level defaults from the default config into the new config
+        phone_config_path = Path(test_configs_dir, "phone_email_url.json")
         deduce = Deduce(config_file=phone_config_path, use_config_defaults=False)
 
         processors = _get_individual_processors(deduce)
@@ -57,4 +54,21 @@ class TestDeduceWithCustomConfig:
         assert (
             result.deidentified_text
             == "Mijn telefoonnummer is <TELEFOONNUMMER-1>. En mijn naam is Elsa van der Wal. <EMAIL-1>, homepage: <URL-1>"
+        )
+
+    def test_first_names_lookup(self):
+        phone_config_path = Path(test_configs_dir, "first_names_lookup.json")
+        deduce = Deduce(config_file=phone_config_path, use_config_defaults=False)
+
+        processors = _get_individual_processors(deduce)
+
+        assert len(processors) == 1
+
+        text = "Mijn telefoonnummer is 06-12345678. En mijn naam is Elsa van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
+        result = deduce.deidentify(text)
+
+        assert len(result.annotations) == 1
+        assert (
+            result.deidentified_text
+            == "Mijn telefoonnummer is 06-12345678. En mijn naam is <VOORNAAM-1> van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
         )

@@ -1,0 +1,25 @@
+{
+    "adjacent_annotations_slack": "[\\. \\-,]?[\\. ]?",
+    "resolve_overlap_strategy": {
+      "attributes": [
+        "priority",
+        "length"
+      ],
+      "ascending": [
+        false,
+        false
+      ]
+    },
+    "redactor_open_char": "<",
+    "redactor_close_char": ">",
+    "annotators":{ 
+        "first_name_lookup": {
+            "annotator_type": "multi_token",
+            "group": "names",
+            "args": {
+              "tag": "voornaam",
+              "lookup_values": "first_names"
+            }
+          }
+    }
+}

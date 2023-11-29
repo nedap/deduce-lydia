@@ -201,11 +201,10 @@ class _AnnotatorFactory:  # pylint: disable=R0903
 
     @staticmethod
     def _get_multi_token_annotator(args: dict, extras: dict) -> dd.process.Annotator:
-        if isinstance(args["lookup_values"], str):
-            lookup_set = extras["lookup_sets"][args["lookup_values"]]
+        lookup_set = extras["lookup_sets"][args["lookup_values"]]
 
-            args["lookup_values"] = lookup_set.items()
-            args["matching_pipeline"] = lookup_set.matching_pipeline
+        args["lookup_values"] = lookup_set.items()
+        args["matching_pipeline"] = lookup_set.matching_pipeline
 
         return dd.process.MultiTokenLookupAnnotator(
             **args, tokenizer=extras["tokenizer"]

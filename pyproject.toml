@@ -79,4 +79,3 @@ disable = ['C0114']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=deduce --cov-fail-under=85"

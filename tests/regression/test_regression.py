@@ -29,6 +29,7 @@ def regression_test(
         except AssertionError:
             failures.add(example["id"])
 
+    assert len(failures) == len(known_failures)
     assert failures == known_failures
 
 
