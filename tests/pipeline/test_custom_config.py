@@ -84,11 +84,13 @@ class TestDeduceWithTokenizerConfig:
         )
         assert len(result) == 10
 
-    def test_hyperscan_tokenizer_config(self):
         hyperscan_config_path = Path(test_configs_dir, "hyperscan_tokenizer.json")
         # use config defaults here because we want to keep all annotators and stuff as such
         deduce = Deduce(config_file=hyperscan_config_path, use_config_defaults=True)
-        assert deduce.tokenizer.__class__.__name__ == "HyperscanDeduceTokenizer"
+        assert (
+            deduce.tokenizers["default"].__class__.__name__
+            == "HyperscanDeduceTokenizer"
+        )
 
         result = deduce.deidentify("Mijn naam is Emma en tel nr is 06-75847585")
         assert (
