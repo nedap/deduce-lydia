@@ -1,23 +1,24 @@
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import docdeid as dd
 import hyperscan
 
 from deduce.tokenizer import DeduceTokenizer
 
-
-def on_match(match):
-    return
-
-
 HYPERSCAN_DB = hyperscan.Database()
 # HS_FLAG_SOM_LEFTMOST set so the left offset is also reported in the match
+# HS_FLAG_UCP to deal with unicode, which needs HS_FLAG_UTF8 as a dependency
 patterns = (
     # expression,  id, flags
     (
-        r"\w+|[\n\r\t]|.(?<! )",
+        "( +)".encode("utf-8"),
         0,
-        hyperscan.HS_FLAG_SOM_LEFTMOST | hyperscan.FLAG_CASELESS,
+        hyperscan.HS_FLAG_SOM_LEFTMOST | hyperscan.HS_FLAG_UCP | hyperscan.HS_FLAG_UTF8,
+    ),
+    (
+        "([^\w\s]|[\n\r\t])".encode("utf-8"),
+        1,
+        hyperscan.HS_FLAG_SOM_LEFTMOST | hyperscan.HS_FLAG_UCP | hyperscan.HS_FLAG_UTF8,
     ),
 )
 expressions, ids, flags = zip(*patterns)
@@ -25,14 +26,8 @@ HYPERSCAN_DB.compile(
     expressions=expressions, ids=ids, elements=len(patterns), flags=flags
 )
 
-print(HYPERSCAN_DB.info().decode())
 
 print("finished compiling")
-
-
-# todo: check if more readable version is truly equivalent
-# _TOKENIZER_PATTERN_HYPERSCAN = regex.compile(r"\w+|[\n\r\t]|.(?<! )", flags=re.I | re.M)
-# _TOKENIZER_PATTERN_HYPERSCAN = regex.compile(r"\w+|[\n\r\t]|[^ ]]", flags=re.I | re.M)
 
 
 class HyperscanDeduceTokenizer(DeduceTokenizer):  # pylint: disable=R0903
@@ -47,64 +42,9 @@ class HyperscanDeduceTokenizer(DeduceTokenizer):  # pylint: disable=R0903
     """
 
     def __init__(self, merge_terms: Optional[Iterable] = None) -> None:
-        super().__init__()
+        super().__init__(merge_terms=merge_terms)
 
         self._pattern = HYPERSCAN_DB
-
-    @staticmethod
-    def _join_tokens(text: str, tokens: list[dd.tokenize.Token]) -> dd.tokenize.Token:
-        """
-        Join a list of tokens into a single token. Does this by creating a new token,
-        that ranges from the first token start char to the last token end char.
-
-        Args:
-            text: The original text.
-            tokens: The input tokens.
-
-        Returns:
-            The output token.
-        """
-
-        return dd.Token(
-            text=text[tokens[0].start_char : tokens[-1].end_char],
-            start_char=tokens[0].start_char,
-            end_char=tokens[-1].end_char,
-        )
-
-    def _merge(
-        self, text: str, tokens: list[dd.tokenize.Token]
-    ) -> list[dd.tokenize.Token]:
-        """
-        Merge a list of tokens based on the trie.
-
-        Args:
-            tokens: A list of tokens, with merge_terms split.
-
-        Returns:
-            A list of tokens, with merge_terms joined in single tokens.
-        """
-
-        tokens_text = [token.text for token in tokens]
-        tokens_merged = []
-        i = 0
-
-        while i < len(tokens):
-            longest_matching_prefix = self._trie.longest_matching_prefix(
-                tokens_text[i:]
-            )
-
-            if longest_matching_prefix is None:
-                tokens_merged.append(tokens[i])
-                i += 1
-
-            else:
-                num_tokens_to_merge = len(longest_matching_prefix)
-                tokens_merged.append(
-                    self._join_tokens(text, tokens[i : i + num_tokens_to_merge])
-                )
-                i += num_tokens_to_merge
-
-        return tokens_merged
 
     def _split_text(self, text: str) -> list[dd.tokenize.Token]:
         """
@@ -117,25 +57,143 @@ class HyperscanDeduceTokenizer(DeduceTokenizer):  # pylint: disable=R0903
             A list of tokens.
         """
 
-        tokens = []
-        result = []
+        special_chars, white_space_result = self.__get_hyperscan_matches(text)
 
-        # define function to be called on match
-        def on_match(id: int, froms: int, to: int, flags: int) -> Optional[bool]:
-            result.append((froms, to))
+        offset = 0
+        words = []
 
-        HYPERSCAN_DB.scan(text.encode("utf-8"), match_event_handler=on_match)
+        for from_ch, to_ch in white_space_result:
+            if from_ch == 0:
+                offset = to_ch
+                continue
 
-        for start_ch, end_ch in result:
-            tokens.append(
-                dd.Token(
-                    text=text[start_ch:end_ch],
-                    start_char=start_ch,
-                    end_char=end_ch,
+            # do different if any special chars in this token
+            if special_chars and special_chars[0] < from_ch:
+                words.extend(
+                    self.__split_special_chars(text, offset, from_ch, special_chars)
                 )
+            else:
+                w = text[offset:from_ch]
+                words.append((w, offset, from_ch))
+                print(f"Found match from {offset} to {from_ch} in text: {w}")
+
+            offset = to_ch
+
+        # append remaining token
+        if offset < len(text):
+            if special_chars:
+                words.extend(
+                    self.__split_special_chars(text, offset, len(text), special_chars)
+                )
+            else:
+                w = text[offset : len(text)]
+                words.append((w, offset, len(text)))
+                print(f"Added match from {offset} to {len(text)} in text: {w}")
+
+        tokens = [
+            dd.Token(
+                text=w,
+                start_char=start_ch,
+                end_char=end_ch,
             )
+            for (w, start_ch, end_ch) in words
+        ]
 
         if self._trie is not None:
             tokens = self._merge(text, tokens)
 
         return tokens
+
+    def __get_hyperscan_matches(self, text):
+        encoded_text = text.encode("utf-8")
+        pos_folding = self.__create_unicode_fold_pos_dict(text)
+        print(len(text), len(encoded_text))
+
+        white_space_result = {}
+        special_chars = []
+
+        # define function to be called on match
+        def on_match(
+            id: int,
+            from_byte: int,
+            to_byte: int,
+            flags: int,
+            context: Optional[Any] = None,
+        ) -> Optional[bool]:
+            # id 0 is whitespace, id 1 is special chars
+            if id == 0:
+                char_pos_result = pos_folding[from_byte], pos_folding[to_byte]
+                if from_byte in white_space_result:
+                    # overwrite if this is the longest current match
+                    cur_size = (
+                        white_space_result[from_byte][1]
+                        - white_space_result[from_byte][0]
+                    )
+                    if to_byte - from_byte > cur_size:
+                        white_space_result[from_byte] = char_pos_result
+                else:
+                    white_space_result[from_byte] = char_pos_result
+            else:
+                special_chars.append(from_byte)
+
+        HYPERSCAN_DB.scan(encoded_text, match_event_handler=on_match)
+
+        # convert to positions in text when this is a str
+        # since unicode chars are double the size of ascii chars in bytes
+        special_chars = sorted(pos_folding[i] for i in special_chars)
+        white_space_result = sorted(white_space_result.values())
+        return special_chars, white_space_result
+
+    def __split_special_chars(self, text, from_ch, to_ch, special_chars):
+        if not special_chars:
+            raise ValueError(
+                "unexpected call, should already be established that there are special chars"
+            )
+
+        special_ch = special_chars.pop(0)
+        if not from_ch <= special_ch < to_ch:
+            raise ValueError(
+                "unexpected call, should already be established that there is a special char in word"
+            )
+
+        words = []
+        word_offset = from_ch
+        while word_offset != to_ch:
+            # if special char is reached, add as a single char
+            if word_offset == special_ch:
+                words.append((text[special_ch], special_ch, special_ch + 1))
+                word_offset += 1
+                print(
+                    f"Found match inside sequence from {special_ch} to {special_ch + 1} in text: {text[special_ch]}"
+                )
+                # see if more special char are part of the sequence
+                if special_chars and special_chars[0] < to_ch:
+                    special_ch = special_chars.pop(0)
+                else:
+                    special_ch = None
+
+            # add remainder of the word if there is no special char in it
+            if special_ch is None and word_offset < to_ch:
+                words.append((text[word_offset:to_ch], word_offset, to_ch))
+                print(
+                    f"Found match inside sequence from {word_offset} to {to_ch} in text: {text[word_offset:to_ch]}"
+                )
+                word_offset = to_ch
+
+            # add word up until special char
+            if special_ch is not None and word_offset < special_ch:
+                words.append((text[word_offset:special_ch], word_offset, special_ch))
+                print(
+                    f"Found match inside sequence from {word_offset} to {special_ch} in text: {text[word_offset:special_ch]}"
+                )
+                word_offset = special_ch
+        return words
+
+    def __create_unicode_fold_pos_dict(self, text):
+        positions = []
+        for index, char in enumerate(text):
+            positions.append(index)
+            # if ord is larger than 127, it is a unicode char and requires 2 bytes in utf-8
+            if ord(char) > 127:
+                positions.append(index)
+        return {i: v for i, v in enumerate(positions)}

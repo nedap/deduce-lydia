@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 from typing import Dict
 
-from deduce import Deduce
+from deduce.deduce import Deduce
+from deduce.tokenizer_hyperscan import HyperscanDeduceTokenizer
 
 
 def _get_individual_processors(deduce: Deduce) -> Dict:
@@ -72,4 +73,25 @@ class TestDeduceWithCustomConfig:
         assert (
             result.deidentified_text
             == "Mijn telefoonnummer is 06-12345678. En mijn naam is <PERSOON-1> van der Wal. elsa_wal@hotmail.com, homepage: https://www.elsa.co.uk"
+        )
+
+
+class TestDeduceWithTokenizerConfig:
+    def test_tokenizer_creation(self):
+        tokenizer = HyperscanDeduceTokenizer()
+        result = tokenizer._split_text(
+            "Mijn naam is Emma van Vlatingen en woon in Utrecht"
+        )
+        assert len(result) == 10
+
+    def test_hyperscan_tokenizer_config(self):
+        hyperscan_config_path = Path(test_configs_dir, "hyperscan_tokenizer.json")
+        # use config defaults here because we want to keep all annotators and stuff as such
+        deduce = Deduce(config_file=hyperscan_config_path, use_config_defaults=True)
+        assert deduce.tokenizer.__class__.__name__ == "HyperscanDeduceTokenizer"
+
+        result = deduce.deidentify("Mijn naam is Emma en tel nr is 06-75847585")
+        assert (
+            result.deidentified_text
+            == "Mijn naam is <PERSOON-1> en tel nr is <TELEFOONNUMMER-1>"
         )

@@ -17,6 +17,7 @@ from deduce.annotator import ContextAnnotator, TokenPatternAnnotator
 from deduce.lookup_sets import get_lookup_sets
 from deduce.redact import DeduceRedactor
 from deduce.tokenizer import DeduceTokenizer
+from deduce.tokenizer_hyperscan import HyperscanDeduceTokenizer
 
 
 class Deduce(dd.DocDeid):
@@ -79,6 +80,12 @@ class Deduce(dd.DocDeid):
             if key in self.lookup_sets:
                 merge_terms += self.lookup_sets[key]
 
+        if (
+            "tokenizer" in self.config
+            and self.config["tokenizer"] == "hyperscan_tokenizer"
+        ):
+            return {"default": HyperscanDeduceTokenizer(merge_terms=merge_terms)}
+
         return {"default": DeduceTokenizer(merge_terms=merge_terms)}
 
     @staticmethod
@@ -110,8 +117,6 @@ class Deduce(dd.DocDeid):
             self.processors["names"].add_processor(
                 "person_annotation_converter", PersonAnnotationConverter()
             )
-
-        x = 2
 
         if "locations" in self.processors._processors:
             self.processors["locations"].add_processor(
