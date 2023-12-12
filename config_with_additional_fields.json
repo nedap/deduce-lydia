@@ -1,0 +1,645 @@
+{
+    "adjacent_annotations_slack": "[\\. \\-]?[\\. ]?",
+    "resolve_overlap_strategy": {
+        "attributes": [
+            "priority",
+            "length"
+        ],
+        "ascending": [
+            false,
+            false
+        ]
+    },
+    "redactor_open_char": "<",
+    "redactor_close_char": ">",
+    "annotators": {
+        "prefix_with_initial": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "prefix+initiaal",
+                "skip": [
+                    "."
+                ],
+                "pattern": [
+                    {
+                        "lookup": "prefixes"
+                    },
+                    {
+                        "or": [
+                            {
+                                "is_initial": true
+                            },
+                            {
+                                "is_initials": true
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Tags a prefix such as doctor followed by an initial",
+            "bounds": "Lowercased initials will not be tagged, the prefix can have a first capital letter or be all lowercase. Insensitive to period placement."
+        },
+        "prefix_with_interfix": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "prefix+interfix+naam",
+                "skip": [
+                    "."
+                ],
+                "pattern": [
+                    {
+                        "lookup": "prefixes"
+                    },
+                    {
+                        "lookup": "interfixes"
+                    },
+                    {
+                        "like_name": true
+                    }
+                ]
+            },
+            "description": "Tags a prefix followed by an interfix and a word that follows the first uppercase letter rule for a name",
+            "bounds": "A prefix has to be present, the name has to follow spacing rules, only tags sequences with an interfix in between."
+        },
+        "prefix_with_name": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "prefix+naam",
+                "skip": [
+                    "."
+                ],
+                "pattern": [
+                    {
+                        "lookup": "prefixes"
+                    },
+                    {
+                        "and": [
+                            {
+                                "like_name": true
+                            },
+                            {
+                                "neg_lookup": "whitelist"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Tags a prefix followed by a word that follows the first uppercase letter rule for a name",
+            "bounds": "A prefix has to be present, the name has to be a single word, and the name has to follow uppercasing rules. There are exceptions as defined in whitelist lookup set"
+        },
+        "interfix_with_name": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "interfix+achternaam",
+                "skip": [],
+                "pattern": [
+                    {
+                        "lookup": "interfixes"
+                    },
+                    {
+                        "and": [
+                            {
+                                "lookup": "interfix_surnames"
+                            },
+                            {
+                                "neg_lookup": "whitelist"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Matches an interfix followed by a known surname that is not part of the whitelist",
+            "bounds": "interfix has to be present, the surname has to follow casing (as this is the format in the file), surname cannot be part of whitelist or of interfix surnames exceptions"
+        },
+        "initial_with_capital": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "initiaal+naam",
+                "skip": [
+                    "."
+                ],
+                "pattern": [
+                    {
+                        "is_initial": true
+                    },
+                    {
+                        "and": [
+                            {
+                                "like_name": true
+                            },
+                            {
+                                "neg_lookup": "whitelist"
+                            },
+                            {
+                                "neg_lookup": "prefixes"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Tags initials that are followed by a word that follows the first uppercase letter rule for a name",
+            "bounds": "Initials have to be present, name has to follow casing rules, name has to be single token, name cannot be part of whitelist or prefixes"
+        },
+        "initial_interfix": {
+            "annotator_type": "token_pattern",
+            "group": "names",
+            "args": {
+                "tag": "initiaal+interfix+naam",
+                "skip": [
+                    "."
+                ],
+                "pattern": [
+                    {
+                        "is_initial": true
+                    },
+                    {
+                        "lookup": "interfixes"
+                    },
+                    {
+                        "like_name": true
+                    }
+                ]
+            },
+            "description": "Tags a initial followed by an interfix and a word that follows the first uppercase letter rule for a name",
+            "bounds": "Initals and interfix have to be present, name has to be single token and follow uppercasing rule. No exceptions are checked."
+        },
+        "first_name_lookup": {
+            "annotator_type": "multi_token",
+            "group": "names",
+            "args": {
+                "tag": "voornaam",
+                "lookup_values": "first_names"
+            },
+            "description": "Does a lookup on known first names.",
+            "bounds": "first letter has to be uppercase as in the data file, name can consist of multiple tokens, usage of dashes allowed IDK WHICH VARIATIONS WILL WORK HERE-> WHAT IF SPACE IS FORGOTTEN? STILL COUNTS?, space and dash interchanchable?"
+        },
+        "surname_lookup": {
+            "annotator_type": "multi_token",
+            "group": "names",
+            "args": {
+                "tag": "achternaam",
+                "lookup_values": "surnames"
+            },
+            "description": "Does a lookup on known surnames.",
+            "bounds": "first letter has to be uppercase as in the data file, name can consist of multiple tokens, usage of dashes and spaces allowed"
+        },
+        "person_first_name": {
+            "annotator_type": "dd_token_pattern",
+            "group": "names",
+            "args": {
+                "pattern": {
+                    "module": "deduce.pattern",
+                    "class": "PersonFirstNamePattern",
+                    "tag": "voornaam_patient"
+                }
+            },
+            "description": "Check based on a pattern generated online based on first name input",
+            "bounds": "If the name is >3 characters it is also checked with a edit distance of 1"
+        },
+        "person_initial_from_name": {
+            "annotator_type": "dd_token_pattern",
+            "group": "names",
+            "args": {
+                "pattern": {
+                    "module": "deduce.pattern",
+                    "class": "PersonInitialFromNamePattern",
+                    "tag": "initiaal_patient"
+                }
+            },
+            "description": "Will match uppercase single characters if they are the first letter of one of the provided names",
+            "bounds": "Has to be uppercase and separated. ABC van den Broek will not match, even if ABC are the patients firstnames. Allowed to be seperated by periods or spaces"
+        },
+        "person_initials": {
+            "annotator_type": "dd_token_pattern",
+            "group": "names",
+            "args": {
+                "pattern": {
+                    "module": "deduce.pattern",
+                    "class": "PersonInitialsPattern",
+                    "tag": "achternaam_patient"
+                }
+            },
+            "description": "matches against provided sequence of initials",
+            "bounds": "Is order invariant and does not seem resilient against bad input: 'a' as input will tag all separate a's in the text. matching check is case sensitive"
+        },
+        "person_surname": {
+            "annotator_type": "dd_token_pattern",
+            "group": "names",
+            "args": {
+                "pattern": {
+                    "module": "deduce.pattern",
+                    "class": "PersonSurnamePattern",
+                    "tag": "achternaam_patient"
+                }
+            },
+            "description": "creates a pattern based on tokenized input name. Will match against this pattern",
+            "bounds": "Invariant for dash, space and period in case of multiple tokens. Does the per token check with a max edit distance of 1, no length check or anything here"
+        },
+        "name_context": {
+            "annotator_type": "annotation_context",
+            "group": "names",
+            "args": {
+                "iterative": true,
+                "pattern": [
+                    {
+                        "name": "interfix_right",
+                        "direction": "right",
+                        "pre_tag": [
+                            "initiaal",
+                            "naam"
+                        ],
+                        "tag": "{tag}+interfix+achternaam",
+                        "skip": [
+                            ".",
+                            "-"
+                        ],
+                        "pattern": [
+                            {
+                                "lookup": "interfixes"
+                            },
+                            {
+                                "like_name": true
+                            }
+                        ]
+                    },
+                    {
+                        "name": "initial_left",
+                        "direction": "left",
+                        "pre_tag": [
+                            "initiaal",
+                            "naam",
+                            "interfix"
+                        ],
+                        "tag": "initiaal+{tag}",
+                        "skip": [
+                            "."
+                        ],
+                        "pattern": [
+                            {
+                                "is_initial": true
+                            }
+                        ]
+                    },
+                    {
+                        "name": "naam_left",
+                        "direction": "left",
+                        "pre_tag": [
+                            "naam"
+                        ],
+                        "tag": "naam+{tag}",
+                        "skip": [
+                            "-"
+                        ],
+                        "pattern": [
+                            {
+                                "and": [
+                                    {
+                                        "like_name": true
+                                    },
+                                    {
+                                        "neg_lookup": "whitelist"
+                                    },
+                                    {
+                                        "neg_lookup": "prefixes"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "naam_right",
+                        "direction": "right",
+                        "pre_tag": [
+                            "prefix",
+                            "initiaal",
+                            "interfix",
+                            "naam"
+                        ],
+                        "tag": "{tag}+naam",
+                        "skip": [
+                            "-"
+                        ],
+                        "pattern": [
+                            {
+                                "and": [
+                                    {
+                                        "like_name": true
+                                    },
+                                    {
+                                        "neg_lookup": "whitelist"
+                                    },
+                                    {
+                                        "neg_lookup": "prefixes"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "prefix_left",
+                        "direction": "left",
+                        "pre_tag": [
+                            "prefix",
+                            "initiaal",
+                            "interfix",
+                            "naam"
+                        ],
+                        "tag": "prefix+{tag}",
+                        "skip": [
+                            "."
+                        ],
+                        "pattern": [
+                            {
+                                "and": [
+                                    {
+                                        "lookup": "prefixes"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Iteratively (until no changes were made after applying all) checks different patterns dependent on other tags. The patterns are: 1) A interfix and last name following an initial OR name. 2) An initial preceding a name/interfix/initial. 3) A name to the left of a already known name. 4) A name to the right of a already known name. 5) A prefix to the left of a already known name.",
+            "bounds": "All checks have name convention for uppercase first letter as a requirement. The whitelist negative lookup is used for names. This mainly accounts for repetitions."
+        },
+        "placename": {
+            "annotator_type": "multi_token",
+            "group": "locations",
+            "args": {
+                "lookup_values": "placenames",
+                "tag": "locatie"
+            },
+            "description": "Tags placenames based on a lookup",
+            "bounds": "Capital letter sensitive, has some variants added into the set on loading (e.g. ascii folding for unicode). No invariance for type of punctuation ' vs ` for instance"
+        },
+        "street_pattern": {
+            "annotator_type": "token_pattern",
+            "group": "locations",
+            "args": {
+                "pattern": [
+                    {
+                        "re_match": "[A-Z][a-z]+(baan|bolwerk|dam|dijk|dreef|drf|dyk|gr|gracht|hf|hof|kade|laan|ln|markt|mrkt|pad|park|pd|plantsoen|plein|pln|plnts|prk|singel|sngl|st|steeg|stg|str|straat|weg|wg)$"
+                    }
+                ],
+                "tag": "straat",
+                "priority": 1
+            },
+            "description": "Matches any token that has a suffix as defined in the regex pattern",
+            "bounds": "Can only deal with single token, must start with capital letter. Any matched token that does not get a housenumber attached to it later will be removed"
+        },
+        "street_lookup": {
+            "annotator_type": "multi_token",
+            "group": "locations",
+            "args": {
+                "lookup_values": "streets",
+                "tag": "straat",
+                "priority": 1
+            },
+            "description": "Tags names of streets based on multi token lookup",
+            "bounds": "Capital letter sensitive, ascii folding on unicode at lookup load, no punctuation invariance"
+        },
+        "housenumber": {
+            "annotator_type": "annotation_context",
+            "group": "locations",
+            "args": {
+                "iterative": true,
+                "pattern": [
+                    {
+                        "name": "housenumber_right",
+                        "direction": "right",
+                        "pre_tag": [
+                            "straat"
+                        ],
+                        "tag": "{tag}+huisnummer",
+                        "skip": [],
+                        "pattern": [
+                            {
+                                "re_match": "\\d{1,4}$"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "housenumber_housenumberletter_right",
+                        "direction": "right",
+                        "pre_tag": [
+                            "straat"
+                        ],
+                        "tag": "{tag}+huisnummer+huisnummerletter",
+                        "skip": [],
+                        "pattern": [
+                            {
+                                "re_match": "\\d{1,4}[a-zA-Z]$"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "housenumberletter_right",
+                        "direction": "right",
+                        "pre_tag": [
+                            "huisnummer"
+                        ],
+                        "tag": "{tag}+huisnummerletter",
+                        "skip": [],
+                        "pattern": [
+                            {
+                                "re_match": "[a-zA-Z]$"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "description": "Matches housenumber presence to the right of streetnames.",
+            "bounds": "Allows max 4 digit number and a single letter addition. City stuff like 1 hoog, appartmentnumber or the haarlem way are not covered"
+        },
+        "postal_code": {
+            "annotator_type": "regexp",
+            "group": "locations",
+            "args": {
+                "regexp_pattern": "(\\d{4}([A-Za-z]{2}| [A-Z]{2}))(?<!mg|MG|gr|ie)(\\W|$)",
+                "capturing_group": 1,
+                "tag": "locatie"
+            },
+            "description": "Matches dutch postal code format. Is applied directly on text rather than token based",
+            "bounds": "Allows for a space between numbers and letters. If a real postal code letters look like a unit and a space is inbetween -> not captured"
+        },
+        "postbus": {
+            "annotator_type": "regexp",
+            "group": "locations",
+            "args": {
+                "regexp_pattern": "([Pp]ostbus\\s\\d{1,5}(\\.\\d{2,4})?)",
+                "tag": "locatie"
+            },
+            "description": "Matches postbus prefix with numerical value after it",
+            "bounds": "Allows for a single dot in the number and must have (only) a single space between postbus and number"
+        },
+        "hospital": {
+            "annotator_type": "multi_token",
+            "group": "institutions",
+            "args": {
+                "lookup_values": "hospitals",
+                "tag": "instelling"
+            },
+            "description": "Matches all known names of hospitals in multi token setting",
+            "bounds": "Has ascii folding and both full names and abbreviations in lookupset loading"
+        },
+        "institution": {
+            "annotator_type": "multi_token",
+            "group": "institutions",
+            "args": {
+                "lookup_values": "healthcare_institutions",
+                "tag": "instelling"
+            },
+            "description": "Matches all names of known institutions in multi token setting",
+            "bounds": "Has ascii folding and fully uppercase transformations in loading of lookupset"
+        },
+        "date_dmy_1": {
+            "annotator_type": "regexp",
+            "group": "dates",
+            "args": {
+                "regexp_pattern": "(?<!\\d)(([1-9]|0[1-9]|[12][0-9]|3[01])(?P<sep>[-/\\. ])([1-9]|0[1-9]|1[012])(?P=sep)((19|20|\\'|`)?\\d{2}))(?!\\d)",
+                "tag": "datum",
+                "capturing_group": 1
+            },
+            "description": "Matches day first month second and year last format, in all numbers",
+            "bounds": "Requires repeated separator [-/\\.], covers year with quotation mark and 2 numbers. Bounds marked by not a number before and after"
+        },
+        "date_dmy_2": {
+            "annotator_type": "regexp",
+            "group": "dates",
+            "args": {
+                "regexp_pattern": "(?i)(?<!\\d)(([1-9]|0[1-9]|[12][0-9]|3[01])[-/\\. ]{,2}(januari|jan|februari|feb|maart|mrt|april|apr|mei|juni|jun|juli|jul|augustus|aug|september|sep|sept|oktober|okt|november|nov|december|dec)[-/\\. ]((19|20|\\'|`)?\\d{2}))(?!\\d)",
+                "tag": "datum",
+                "capturing_group": 1
+            },
+            "description": "Matches day first month second and year last format, where month is a word",
+            "bounds": "Requires repeated separator [-/\\.], covers year with quotation mark and 2 numbers. Bounds marked by not a number before and after.  has ignore cas flag"
+        },
+        "date_ymd_1": {
+            "annotator_type": "regexp",
+            "group": "dates",
+            "args": {
+                "regexp_pattern": "(?<!\\d)(((19|20|\\'|`)\\d{2})(?P<sep>[-/\\. ])([1-9]|0[1-9]|1[012])(?P=sep)([1-9]|0[1-9]|[12][0-9]|3[01]))(\\D|$)",
+                "tag": "datum",
+                "capturing_group": 1
+            },
+            "description": "Matches year first month second and day last format, in all numbers",
+            "bounds": "Requires repeated separator [-/\\.], covers year with quotation mark and 2 numbers. Bounds marked by not a number before and after"
+        },
+        "date_ymd_2": {
+            "annotator_type": "regexp",
+            "group": "dates",
+            "args": {
+                "regexp_pattern": "(?i)(?<!\\d)(((19|20|\\'|`)\\d{2})[-/\\. ]{,2}(januari|jan|februari|feb|maart|mrt|april|apr|mei|juni|jun|juli|jul|augustus|aug|september|sep|sept|oktober|okt|november|nov|december|dec)[-/\\. ]([1-9]|0[1-9]|[12][0-9]|3[01]))(?!\\d)",
+                "tag": "datum",
+                "capturing_group": 1
+            },
+            "description": "Matches year first month second and day last format, where month is a word",
+            "bounds": "Requires repeated separator [-/\\.], covers year with quotation mark and 2 numbers. Bounds marked by not a number before and after. Has ignore case flag."
+        },
+        "age": {
+            "annotator_type": "custom",
+            "group": "ages",
+            "args": {
+                "module": "deduce.annotator",
+                "class": "RegexpPseudoAnnotator",
+                "regexp_pattern": "(?i)(?<![\\d,\\.])((1?\\d?\\d)([\\.,]5)?(-(1?\\d?\\d)([\\.,]5)?)?)([ -](jarige|jarig|jaar|jr))(?!\\w)",
+                "pre_pseudo": [
+                    "sinds",
+                    "vanaf",
+                    "controle",
+                    "policontrole",
+                    "gedurende",
+                    "de",
+                    "over",
+                    "elke",
+                    "nog",
+                    "na",
+                    "al",
+                    "up",
+                    "ongeveer",
+                    "<"
+                ],
+                "post_pseudo": [
+                    "geleden",
+                    "na",
+                    "naar",
+                    "nadien",
+                    "aanwezig",
+                    "getrouwd",
+                    "gestopt",
+                    "gerookt",
+                    "gebruikt",
+                    "gestaakt"
+                ],
+                "tag": "leeftijd",
+                "capturing_group": 1
+            },
+            "description": "Tags age if the numerical age is followed by a word representing year",
+            "bounds": "Has a set of words which if preceded or followed by it the match is dicarded. Does not work on baby ages in months."
+        },
+        "bsn": {
+            "annotator_type": "custom",
+            "group": "identifiers",
+            "args": {
+                "module": "deduce.annotator",
+                "class": "BsnAnnotator",
+                "bsn_regexp": "(?<!\\d)(\\d{9})(?!\\d)",
+                "capture_group": 1,
+                "priority": 100,
+                "tag": "bsn"
+            },
+            "description": "Any 9 digit number is tagged as a bsn",
+            "bounds": "No digits inbetween are allowed, wordbound established by not a number, elfproef performed to check if is BSN"
+        },
+        "identifier": {
+            "annotator_type": "regexp",
+            "group": "identifiers",
+            "args": {
+                "regexp_pattern": "\\d{7,}",
+                "tag": "id"
+            },
+            "description": "Matches any numerical code of 7 digits or more",
+            "bounds": "No word bound around it?"
+        },
+        "phone": {
+            "annotator_type": "custom",
+            "group": "phone_numbers",
+            "args": {
+                "module": "deduce.annotator",
+                "class": "PhoneNumberAnnotator",
+                "phone_regexp": "(?<!\\d)(\\(?(0031|\\+31|0)(1[035]|2[0347]|3[03568]|4[03456]|5[0358]|6|7|88|800|91|90[069]|[1-5]\\d{2})\\)?) ?-? ?((\\d{2,4}[ -]?)+\\d{2,4})",
+                "min_digits": 9,
+                "max_digits": 11,
+                "tag": "telefoonnummer"
+            },
+            "description": "Matches dutch phonenumber pattern",
+            "bounds": "Allows for brackets and dashes around known start numbers (regional, country code). Does not match foreign phone numbers"
+        },
+        "email": {
+            "annotator_type": "regexp",
+            "group": "email_addresses",
+            "args": {
+                "regexp_pattern": "(([-a-zA-Z0-9:%._\\+~#=]{1,256})@([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu))",
+                "tag": "email"
+            },
+            "description": "Matches email adresses",
+            "bounds": "No word bound defined Limited set of suffixes"
+        },
+        "url": {
+            "annotator_type": "regexp",
+            "group": "urls",
+            "args": {
+                "regexp_pattern": "((https?:\\/\\/(?:www\\.)?)?([-a-zA-Z0-9:%._\\+~#=]{1,256})(\\.)(com|net|org|co|us|uk|nl|be|fr|sp|gov|nu)(\\b)([():%_\\+.~,]*[-a-zA-Z-0-9#?&/=]+)*)",
+                "tag": "url"
+            },
+            "description": "Matches urls",
+            "bounds": "No word bound defined. Limited set of suffixes"
+        }
+    }
+}
