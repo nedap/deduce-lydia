@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "id": 2,
+            "text": "Dr. Vezavalouvazquez",
+            "annotations": [
+                {
+                    "text": "Dr. Vezavalouvazquez",
+                    "start_char": 0,
+                    "end_char": 20,
+                    "tag": "persoon"
+                }
+            ]
+        },
+        {
+            "id": 0,
+            "text": "mw Eva van der Plas",
+            "annotations": [
+                {
+                    "text": "mw Eva van der Plas",
+                    "start_char": 0,
+                    "end_char": 19,
+                    "tag": "persoon"
+                }
+            ]
+        },
+        {
+            "id": 1,
+            "text": "mw eva van der plas",
+            "annotations": [
+                {
+                    "text": "mw eva van der plas",
+                    "start_char": 0,
+                    "end_char": 19,
+                    "tag": "persoon"
+                }
+            ]
+        }
+    ]
+}

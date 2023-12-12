@@ -28,6 +28,8 @@ def regression_test(
             assert trues == preds
         except AssertionError:
             failures.add(example["id"])
+            print(example)
+            print(f"true: {[t.text for t in trues]}\npred: {[t.text for t in preds]}")
 
     assert len(failures) == len(known_failures)
     assert failures == known_failures
@@ -38,6 +40,28 @@ class TestRegression:
         regression_test(
             model=model,
             examples_file="tests/regression/data/names.json",
+            enabled={
+                "names",
+                "prefix_with_initial",
+                "prefix_with_name",
+                "interfix_with_name",
+                "initial_with_capital",
+                "initial_interfix",
+                "first_name_lookup",
+                "surname_lookup",
+                "person_first_name",
+                "person_initial_from_name",
+                "person_initials",
+                "person_surname",
+                "name_context",
+                "person_annotation_converter",
+            },
+        )
+
+    def test_regression_name_additional(self, model):
+        regression_test(
+            model=model,
+            examples_file="tests/regression/data/names_additional.json",
             enabled={
                 "names",
                 "prefix_with_initial",
