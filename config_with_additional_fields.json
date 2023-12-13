@@ -37,7 +37,7 @@
                     }
                 ]
             },
-            "description": "Tags a prefix such as doctor followed by an initial",
+            "description": "Tags a prefix such as doctor or mw followed by an initial",
             "bounds": "Lowercased initials will not be tagged, the prefix can have a first capital letter or be all lowercase. Insensitive to period placement."
         },
         "prefix_with_interfix": {
