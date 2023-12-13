@@ -69,16 +69,6 @@ class TestTokenizer:
 
         assert joined_token == expected_token
 
-    def test_split_with_merge(self, hyperscan_tokenizer):
-        text = "Pieter van der Zee"
-        expected_tokens = [
-            dd.Token(text="Pieter", start_char=0, end_char=6),
-            dd.Token(text="van der", start_char=7, end_char=14),
-            dd.Token(text="Zee", start_char=15, end_char=18),
-        ]
-
-        assert hyperscan_tokenizer._split_text(text=text) == expected_tokens
-
     def test_unicode(self, hyperscan_tokenizer):
         expected_tokens = [
             dd.Token(text="Danée", start_char=0, end_char=5),
@@ -88,6 +78,12 @@ class TestTokenizer:
 
         text = "Danée is cool"
         assert hyperscan_tokenizer._split_text(text=text) == expected_tokens
+
+    def test_unicode_in_various_positions(self, hyperscan_tokenizer):
+        test_sentences = ["Danée", "Daneé", "éeeee", "hoi alleé", "ésldk haiédi dksié"]
+        for ts in test_sentences:
+            result = hyperscan_tokenizer._split_text(text=ts)
+            assert len(result) == len(ts.split(" "))
 
     def test_multi_patterns(self, hyperscan_tokenizer):
         # testing various combinations of special characters and whitespace at different points

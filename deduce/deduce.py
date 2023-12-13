@@ -6,7 +6,6 @@ from typing import Optional
 
 import docdeid as dd
 
-from deduce import utils
 from deduce.annotation_processing import (
     CleanAnnotationTag,
     DeduceMergeAdjacentAnnotations,
@@ -18,6 +17,7 @@ from deduce.lookup_sets import get_lookup_sets
 from deduce.redact import DeduceRedactor
 from deduce.tokenizer import DeduceTokenizer
 from deduce.tokenizer_hyperscan import HyperscanDeduceTokenizer
+from deduce.utils import import_and_initialize, overwrite_dict
 
 
 class Deduce(dd.DocDeid):
@@ -68,7 +68,7 @@ class Deduce(dd.DocDeid):
             with open(Path(self.config_file), "r", encoding="utf-8") as file:
                 custom_config = json.load(file)
 
-            config = utils.overwrite_dict(config, custom_config)
+            config = overwrite_dict(config, custom_config)
 
         return config
 
@@ -190,7 +190,7 @@ class _AnnotatorFactory:  # pylint: disable=R0903
     def _get_dd_token_pattern_annotator(
         args: dict, extras: dict
     ) -> dd.process.Annotator:
-        pattern = utils.import_and_initialize(args.pop("pattern"), extras=extras)
+        pattern = import_and_initialize(args.pop("pattern"), extras=extras)
         return dd.process.TokenPatternAnnotator(pattern=pattern)
 
     @staticmethod
@@ -219,7 +219,7 @@ class _AnnotatorFactory:  # pylint: disable=R0903
 
     @staticmethod
     def _get_custom_annotator(args: dict, extras: dict) -> dd.process.Annotator:
-        return utils.import_and_initialize(args=args, extras=extras)
+        return import_and_initialize(args=args, extras=extras)
 
     def get_annotators(
         self, annotator_cnfg: dict, extras: dict
